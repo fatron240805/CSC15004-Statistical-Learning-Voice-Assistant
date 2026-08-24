@@ -1,0 +1,62 @@
+# Cấu hình fine-tune ECAPA-TDNN trên VoxVietnam
+# Chỉnh path trước khi chạy trên Kaggle (thường /kaggle/input/... và /kaggle/working/...)
+
+seed: 42
+
+paths:
+  hf_dataset_repo: "hustep-lab/VoxVietnam-Dataset"    # đọc qua streaming, không tải nguyên repo
+  hf_split: "train_small"                              # split nhỏ hơn trong dataset, vẫn cần streaming vì shard Parquet vẫn nặng nếu tải nguyên
+  extracted_dir: "/kaggle/working/voxvietnam_extracted" # nơi ghi các file .wav đã lấy từ streaming (chỉ phần cần dùng, không phải toàn bộ 44.2GB)
+  manifest_dir: "/kaggle/working/splits"               # nơi lưu train.csv/val.csv/test.csv
+  noise_dir: "/kaggle/input/car-cabin-noise"          # noise cabin xe thật, tự chuẩn bị riêng (xem spec mục 2.3)
+  output_dir: "/kaggle/working/outputs"
+  pretrained_source: "speechbrain/spkrec-ecapa-voxceleb"
+
+dataset_sampling:
+  target_num_speakers: 300     # số speaker cần gom đủ trước khi dừng streaming - tăng dần nếu máy chịu được, giảm nếu disk/thời gian hạn chế
+  min_utts_per_speaker: 8        # mỗi speaker cần tối thiểu bấy nhiêu utterance mới tính là "đủ"
+  max_utts_per_speaker: 15       # trần trên, tránh 1 speaker chiếm quá nhiều so với người khác (mất cân bằng)
+
+audio:
+  sample_rate: 16000
+  min_duration_sec: 2.0        # loại bỏ utterance quá ngắn khi train
+  max_duration_sec: 8.0        # cắt bớt utterance quá dài để đồng nhất batch
+
+split:
+  strategy: "speaker_disjoint"  # bắt buộc: 1 speaker không được xuất hiện ở > 1 tập
+  train_ratio: 0.8
+  val_ratio: 0.1
+  test_ratio: 0.1
+
+model:
+  embedding_dim: 192            # mặc định ECAPA-TDNN của SpeechBrain
+  freeze_frontend_epochs: 0     # >0 nếu muốn freeze vài epoch đầu trước khi fine-tune toàn bộ
+
+loss:
+  type: "aam_softmax"
+  margin: 0.2
+  scale: 30
+
+train:
+  batch_size: 32
+  num_epochs: 15
+  lr: 0.0001
+  lr_scheduler: "cosine_with_warmup"
+  warmup_epochs: 1
+  weight_decay: 0.00002
+  num_workers: 4
+  mixed_precision: true
+  checkpoint_every_epoch: true
+
+eval:
+  metrics: ["eer", "mindcf"]
+  mindcf_p_target: 0.01
+  mindcf_c_miss: 1
+  mindcf_c_fa: 1
+  num_trial_pairs: 20000        # số cặp positive+negative sinh ra để đánh giá
+  positive_negative_ratio: 1.0  # cân bằng 1:1
+
+robustness_experiment:
+  snr_levels_db: [20, 15, 10, 5]        # mô phỏng: đỗ xe yên tĩnh -> cao tốc ồn
+  duration_crops_sec: [5.0, 3.0, 2.0]   # lệnh thoại ngắn trong xe
+  output_report: "./outputs/metrics/robustness_report.md"
