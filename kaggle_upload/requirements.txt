@@ -1,0 +1,8 @@
+speechbrain>=1.0
+torch>=2.0
+torchaudio>=2.0
+soundfile
+scikit-learn
+pandas
+numpy
+pyyaml
