@@ -1,0 +1,7 @@
+numpy
+PyYAML
+soundfile
+torch
+torchaudio
+huggingface-hub
+pytest
