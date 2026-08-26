@@ -13,6 +13,7 @@ INTENT_MAP: dict[str, tuple[str, bool]] = {
     "sv_unlock_door": ("sv", True),
     "sv_start_engine": ("sv", True),
     "sid_play_playlist": ("sid", False),  # không cần verify(), nhưng cần identify()
+    "sid_personal_query": ("sid", False),  # hỏi thông tin cá nhân (tên, sở thích...) -> cần identify()
     "unknown": ("unknown", False),
 }
 
@@ -21,6 +22,7 @@ INTENT_ACTION: dict[str, str] = {
     "sv_unlock_door": "unlock_door",
     "sv_start_engine": "start_engine",
     "sid_play_playlist": "play_playlist",
+    "sid_personal_query": "personal_query",
 }
 
 

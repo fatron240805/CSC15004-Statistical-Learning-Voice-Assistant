@@ -14,7 +14,7 @@ import numpy as np
 from backend.db.database import get_session
 from backend.db.models import ActionLog, Preference, User
 from backend.gating import INTENT_ACTION
-from backend.services import music_service, speaker_service, weather_service
+from backend.services import music_service, orchestrator_service, speaker_service, weather_service
 
 logger = logging.getLogger(__name__)
 
@@ -104,5 +104,43 @@ def handle_sid(wav_path: str) -> dict:
             "playlist": playlist,
             "message": "Đang phát danh sách yêu thích của bạn.",
         }
+    finally:
+        session.close()
+
+
+def handle_personal_query(wav_path: str, question: str) -> dict:
+    """SID mở rộng: identify() -> lấy hồ sơ thật (tên, sở thích) -> đưa cho Gemini
+    trả lời tự nhiên (orchestrator_service.answer_with_context). Chỉ dữ liệu đã
+    identify() thành công mới được đưa vào prompt — Gemini không tự bịa danh tính."""
+    session = get_session()
+    try:
+        users = session.query(User).filter(User.embedding.isnot(None)).all()
+        db_embeddings = {u.user_id: np.array(u.embedding) for u in users}
+
+        emb_runtime = speaker_service.get_embedding(wav_path)
+        user_id = speaker_service.identify(emb_runtime, db_embeddings)
+
+        if user_id is None:
+            session.add(ActionLog(user_id=None, action="personal_query", verified=False, score=None))
+            session.commit()
+            return {
+                "user_id": None,
+                "verified": False,
+                "message": "Không nhận diện được giọng nói của bạn, chưa thể trả lời.",
+            }
+
+        score = float(np.dot(emb_runtime, db_embeddings[user_id]))
+        user = session.get(User, user_id)
+        pref = session.get(Preference, user_id)
+        context = {
+            "ten": user.name,
+            "bai_hat_yeu_thich": pref.favorite_tracks if pref and pref.favorite_tracks else [],
+        }
+        message = orchestrator_service.answer_with_context(question, context)
+
+        session.add(ActionLog(user_id=user_id, action="personal_query", verified=True, score=score))
+        session.commit()
+
+        return {"user_id": user_id, "verified": True, "message": message}
     finally:
         session.close()

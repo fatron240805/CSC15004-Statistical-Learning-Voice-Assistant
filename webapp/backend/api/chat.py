@@ -52,7 +52,10 @@ async def chat(
             data = usecases.handle_sv(intent, user_id, wav_path, attempt=sv_attempt)
             text = data["message"]
         elif usecase == "sid":
-            data = usecases.handle_sid(wav_path)
+            if intent == "sid_personal_query":
+                data = usecases.handle_personal_query(wav_path, transcript)
+            else:
+                data = usecases.handle_sid(wav_path)
             text = data["message"]
         else:
             text = "Xin lỗi, tôi chưa hiểu yêu cầu này."

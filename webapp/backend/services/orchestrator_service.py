@@ -30,6 +30,7 @@ Các intent hợp lệ: {intents}
 - sv_unlock_door: yêu cầu mở khoá cửa/khoang xe
 - sv_start_engine: yêu cầu khởi động xe
 - sid_play_playlist: yêu cầu phát nhạc/danh sách yêu thích
+- sid_personal_query: hỏi thông tin cá nhân đã đăng ký (tên tôi là gì, tôi thích bài hát nào...)
 - unknown: không khớp intent nào ở trên
 
 Chỉ trả JSON đúng schema, không giải thích thêm:
@@ -70,3 +71,41 @@ def classify(text: str) -> dict:
     if not isinstance(entities, dict):
         entities = {}
     return {"intent": intent, "entities": entities}
+
+
+_ANSWER_PROMPT_TEMPLATE = """Bạn là trợ lý ảo trên xe hơi. Người dùng vừa được NHẬN DIỆN GIỌNG NÓI
+thành công (identify() đã xác nhận), đây là hồ sơ THẬT của họ trong hệ thống — không phải suy đoán:
+
+{context}
+
+Người dùng vừa hỏi: "{question}"
+
+Trả lời NGẮN GỌN (1-2 câu), tự nhiên bằng tiếng Việt, dựa ĐÚNG vào thông tin trên.
+Không bịa thêm thông tin nào ngoài dữ liệu đã cho. Nếu câu hỏi không liên quan gì đến
+hồ sơ trên, trả lời rằng bạn chỉ biết những thông tin đã đăng ký."""
+
+
+def answer_with_context(question: str, context: dict) -> str:
+    """RAG đơn giản: đưa dữ liệu đã identify() thật cho Gemini trả lời tự nhiên.
+
+    Gemini chỉ diễn đạt lại dữ liệu có sẵn (context lấy từ DB sau identify() thành
+    công), không tự quyết định danh tính hay tự bịa thông tin — khác với classify(),
+    hàm này KHÔNG quyết định route/quyền hạn, chỉ soạn câu trả lời hiển thị cho user.
+    """
+    if not GEMINI_API_KEY:
+        return f"Bạn là {context.get('ten', 'người dùng đã đăng ký')}."
+
+    try:
+        import google.generativeai as genai
+
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel(MODEL_NAME)
+        prompt = _ANSWER_PROMPT_TEMPLATE.format(
+            context=json.dumps(context, ensure_ascii=False), question=question
+        )
+        response = model.generate_content(prompt)
+        text = (response.text or "").strip()
+        return text or f"Bạn là {context.get('ten', 'người dùng đã đăng ký')}."
+    except Exception:
+        logger.exception("Gemini answer_with_context thất bại — fallback trả trực tiếp dữ liệu.")
+        return f"Bạn là {context.get('ten', 'người dùng đã đăng ký')}."
