@@ -1,26 +1,67 @@
-# Deploy lên Hugging Face Spaces (Milestone 10)
+# Deploy lên Hugging Face Spaces (Milestone 10) — ĐÃ LIVE
 
-**Docker SDK bị khoá (paid) trên tài khoản hiện tại** — dùng **Gradio SDK** thay thế: Space chỉ chạy `python app.py`, không yêu cầu code Gradio thật, nên `app.py` ở đây chỉ khởi động thẳng FastAPI qua uvicorn. `packages.txt` thay cho `Dockerfile` để cài `ffmpeg` (Gradio/Streamlit SDK có hỗ trợ apt package qua file này). Nếu sau này tài khoản có Docker (nâng cấp/xác minh), `Dockerfile` vẫn còn trong repo, dùng lại được ngay — xem mục "Phương án Docker (khi có quyền)" cuối file.
+**URL:** https://thales1020-secure-virtual-assistant.hf.space
+**Space:** https://huggingface.co/spaces/thales1020/secure-virtual-assistant
 
-## 1. Tạo Space
+Đã deploy thành công qua `huggingface_hub` API (không phải git clone/push tay) + GitHub Actions tự động đồng bộ mỗi khi push. Tài khoản `thales1020` bị khoá cả **Docker SDK** lẫn **CPU Basic hardware** (yêu cầu PRO, xác nhận qua lỗi `402 Payment Required` khi thử qua API) — chỉ **Gradio SDK + ZeroGPU (Free)** khả dụng. 3 vấn đề riêng của ZeroGPU đã gặp và sửa, liệt kê ở mục 4 — nên đọc kỹ nếu redeploy hoặc đổi hardware.
 
-1. Vào https://huggingface.co/new-space
-2. Chọn **Gradio** làm SDK (Docker đang bị khoá/paid) → template **Blank** (không dùng giao diện Gradio thật, chỉ mượn SDK để chạy `app.py` riêng).
-3. Hardware: chỉ **ZeroGPU (Free)** khả dụng trên tài khoản này (CPU Basic bị khoá) — chọn ZeroGPU, không sao vì app chỉ dùng CPU (`torch` bản CPU-only), phần GPU on-demand của ZeroGPU không dùng tới, không ảnh hưởng.
-4. **Storage Bucket:** bật, tạo bucket mới (vd `SL-storage`), **mount path `/data`**, access **Read & Write**. Code đã tự động phát hiện `/data` và dùng làm nơi lưu bền cho SQLite DB + cache pretrained model (xem `backend/config.py`) — giải quyết luôn nhược điểm "mất dữ liệu khi Space sleep" đã nêu trong spec mục 8.
-5. Sau khi tạo xong, Space có 1 git remote riêng, ví dụ `https://huggingface.co/spaces/<username>/<space-name>`.
+## 1. Cấu hình hiện tại
 
-## 2. Set Secrets (KHÔNG commit .env)
+| Thành phần | Giá trị |
+|---|---|
+| SDK | Gradio (mượn, không dùng giao diện Gradio thật — `app.py` chạy thẳng FastAPI qua uvicorn) |
+| Hardware | ZeroGPU (Free) — app chỉ dùng CPU, không cần GPU thật |
+| Storage | Bucket `thales1020/sl-storage`, mount `/data`, Read & Write — DB + cache pretrained model sống sót qua Space sleep/restart |
+| Secrets | `GEMINI_API_KEY`, `OPENWEATHER_KEY` (set qua `add_space_secret`, không commit `.env`) |
+| Deploy | `scripts/deploy_hf_space.py` (đồng bộ `webapp/` qua `HfApi.upload_folder`), chạy tay hoặc qua CI |
 
-Vào Space → Settings → **Variables and secrets** → thêm:
-- `GEMINI_API_KEY`
-- `OPENWEATHER_KEY`
+## 2. CI/CD — GitHub Actions
 
-(`HF_KEY` không bắt buộc — chỉ giúp tăng rate limit khi tải pretrained model từ HuggingFace Hub.)
+`.github/workflows/deploy-hf-space.yml`: push lên nhánh `khoa` có đổi trong `webapp/**` (trừ các file `.md`) → tự chạy `scripts/deploy_hf_space.py` → đồng bộ sang Space → Space tự rebuild.
 
-## 3. Đẩy code lên Space (git repo riêng, khác GitHub)
+Cần secret `HF_TOKEN` (quyền Write) trong GitHub repo settings — đã set. Checkpoint (`checkpoints/best.pt`, 89MB) **không** đồng bộ qua CI (ignore_patterns loại trừ `checkpoints/*`) vì nó gitignored, hiếm khi đổi, và đã có sẵn trên Space từ lần deploy tay đầu tiên. Nếu train lại model, upload tay:
 
-Space yêu cầu file `README.md` ở root với YAML frontmatter để biết cấu hình. **Tự tạo file này TRỰC TIẾP trong git repo của Space** (không phải trong repo GitHub hiện tại), nội dung:
+```bash
+python -c "
+from huggingface_hub import HfApi
+HfApi(token='<HF_TOKEN write>').upload_file(
+    path_or_fileobj='webapp/checkpoints/best.pt',
+    path_in_repo='checkpoints/best.pt',
+    repo_id='thales1020/secure-virtual-assistant',
+    repo_type='space',
+)"
+```
+
+Chạy tay full sync (bằng đúng script CI dùng):
+
+```bash
+HF_TOKEN=<write token> python scripts/deploy_hf_space.py
+```
+
+## 3. Tạo lại từ đầu (nếu cần Space mới)
+
+Dùng `huggingface_hub` API thay vì UI/git clone thủ công — nhanh và có thể lặp lại:
+
+```python
+from huggingface_hub import HfApi, SpaceHardware
+from huggingface_hub.hf_api import Volume
+
+api = HfApi(token="<write token>")
+repo_id = "thales1020/secure-virtual-assistant"
+
+api.create_repo(repo_id, repo_type="space", space_sdk="gradio",
+                 space_hardware=SpaceHardware.ZERO_A10G, private=False, exist_ok=True)
+api.create_bucket("thales1020/sl-storage", private=False, exist_ok=True)
+api.set_space_volumes(repo_id, volumes=[
+    Volume(type="bucket", source="thales1020/sl-storage", mount_path="/data", read_only=False)
+])
+api.add_space_secret(repo_id, "GEMINI_API_KEY", "<value>")
+api.add_space_secret(repo_id, "OPENWEATHER_KEY", "<value>")
+api.upload_folder(repo_id=repo_id, repo_type="space", folder_path="webapp",
+                   ignore_patterns=[".venv/*", "**/__pycache__/*", "*.pyc", "**/desktop.ini"])
+```
+
+`README.md` ở gốc `webapp/` (được upload lên) chứa YAML frontmatter Space đọc để biết SDK/entry point:
 
 ```yaml
 ---
@@ -34,38 +75,31 @@ app_file: app.py
 ---
 ```
 
-Các bước đẩy code (chạy trong 1 thư mục riêng, KHÔNG phải trong repo GitHub này):
+`requirements.txt` dùng ở gốc `webapp/` (khác `webapp/backend/requirements.txt` — bản đó cho venv dev local, torch 2.4.1 theo khuyến nghị Module A). Bản deploy dùng torch 2.11.0 vì lý do ở mục 4.
+
+## 4. Ba vấn đề riêng của ZeroGPU đã gặp — QUAN TRỌNG nếu redeploy
+
+**(a) torch version:** ZeroGPU chỉ chấp nhận torch 2.8.0/2.9.1/2.10.0/2.11.0 trong `requirements.txt` — `torch==2.4.1` (khuyến nghị Module A cho dev local) bị `CONFIG_ERROR` ngay khi build. `webapp/requirements.txt` dùng `torch==2.11.0` + `torchaudio==2.11.0` (đổi backend đọc audio sang `torchcodec`, đã thêm dependency) — **chỉ áp dụng cho bản deploy**, không đổi `webapp/backend/requirements.txt` (dev local Windows vẫn 2.4.1, đã verify chạy tốt).
+
+**(b) `@spaces.GPU` bắt buộc:** ZeroGPU Space báo `RUNTIME_ERROR: No @spaces.GPU function detected during startup` nếu không có function nào decorate `@spaces.GPU` được **gọi** lúc khởi động (chỉ định nghĩa không đủ — phải gọi). `webapp/app.py` có hàm `_zerogpu_probe()` decorate `@spaces.GPU`, gọi 1 lần trước khi `uvicorn.run()` — không tốn GPU thật (không nằm trong luồng xử lý request nào), chỉ để platform nhận diện.
+
+**(c) `torch.cuda.is_available()` bị patch:** gói `spaces` patch hàm này luôn trả `True` (giả lập có GPU cho cơ chế cấp phát theo yêu cầu). `speaker_model.py` (Module A, không được sửa) tự chọn `device="cuda"` dựa trên giá trị đó, rồi crash vì gọi CUDA thật ngoài phạm vi hàm `@spaces.GPU`. Sửa trong `webapp/backend/services/speaker_service.py` (file của Module B, không phải `speaker_model.py`): patch chồng `torch.cuda.is_available = lambda: False` ngay trước khi khởi tạo `SpeakerModel`, chạy sau patch của `spaces` nên thắng, buộc chọn đúng CPU.
+
+## 5. Kiểm tra sau khi deploy
 
 ```bash
-git clone https://huggingface.co/spaces/<username>/<space-name>
-cd <space-name>
-# copy toàn bộ nội dung webapp/ vào đây: app.py, requirements.txt, packages.txt,
-# backend/, frontend/, checkpoints/ (Dockerfile/.dockerignore không cần cho Gradio SDK, giữ lại cũng không sao)
-# tạo README.md như trên
-git lfs install
-git lfs track "*.pt"          # checkpoint 89MB cần git-lfs, không push thẳng
-git add .
-git commit -m "Deploy Module B"
-git push
+curl https://thales1020-secure-virtual-assistant.hf.space/health
+# {"status":"ok","speaker_model_ready":true}
 ```
 
-Lưu ý: `requirements.txt` dùng ở đây là **`webapp/requirements.txt`** (ở gốc, có dòng `--extra-index-url .../whl/cpu` để lấy bản torch CPU nhẹ) — không phải `webapp/backend/requirements.txt` (bản đó dùng cho venv dev local, không có dòng index CPU vì lúc dev local dùng bản GPU/CPU tuỳ máy đều được).
-
-**Lưu ý về checkpoint (`checkpoints/best.pt`, 89MB):** file này đang bị `.gitignore` chặn trong repo GitHub chính (đúng ý — repo bài nộp không nên chứa file nặng, theo hướng dẫn đề bài mục 4 "upload Drive nếu quá lớn"). Khi đẩy sang HF Space, đây là git repo khác — cần add + `git lfs track` riêng cho nó ở đó, không ảnh hưởng `.gitignore` của repo GitHub.
-
-## 4. Kiểm tra sau khi deploy
-
-- Space build xong (theo dõi tab "Logs"), mở URL `https://<username>-<space-name>.hf.space`.
-- Test `/health` → phải thấy `speaker_model_ready: true` sau khi model load xong (lần đầu có thể chậm vì tải pretrained model từ HF Hub).
-- Test enrollment + chat qua giao diện web thật.
+Lần đầu bucket rỗng: tải `speechbrain/spkrec-ecapa-voxceleb` (~90MB) + `vinai/PhoWhisper-base` từ HF Hub, mất khoảng 1-2 phút. Các lần sau đọc từ `/data/hf_cache` nên nhanh, kể cả sau khi Space sleep/restart.
 
 ## Giới hạn đã biết (nêu trong báo cáo)
 
-- **Đã nâng cấp so với bản trước:** nhờ Storage Bucket mount ở `/data`, SQLite DB và cache pretrained model giờ **sống sót qua Space sleep/restart** — không còn phải enroll lại mỗi lần. `backend/config.py` tự phát hiện `/data` (`DATA_DIR`), fallback về thư mục local khi dev trên máy không có bucket.
-- Lần đầu khởi động (bucket rỗng) vẫn phải tải `speechbrain/spkrec-ecapa-voxceleb` (~90MB) + `vinai/PhoWhisper-base` từ HuggingFace Hub — mất vài phút; các lần sau đọc từ `/data/hf_cache` nên nhanh, kể cả sau khi Space sleep/restart.
-- Chạy qua "Gradio SDK" chỉ là cách lách hạ tầng (không dùng Gradio thật) — không ảnh hưởng kiến trúc/pipeline đã thiết kế, nên nêu trong báo cáo là quyết định hạ tầng do giới hạn tài khoản, không phải thay đổi thiết kế hệ thống.
-- Hardware ZeroGPU thay vì CPU Basic — cũng là giới hạn tài khoản, app không dùng GPU nên không ảnh hưởng chức năng, chỉ nêu cho đầy đủ trong báo cáo.
+- Docker SDK và CPU Basic hardware bị khoá do giới hạn tài khoản (xác nhận qua lỗi `402 Payment Required`), không phải lựa chọn thiết kế — dùng Gradio SDK (chạy FastAPI thuần, không dùng UI Gradio) + ZeroGPU thay thế.
+- App 100% dùng CPU, không có nhu cầu GPU thật — 3 vấn đề ở mục 4 đều là workaround để platform ZeroGPU chấp nhận một app không thật sự cần GPU, không phải thay đổi kiến trúc hệ thống.
+- Storage Bucket là tính năng có thể tính phí trên tài khoản Enterprise/PRO; với tài khoản free hiện tại việc gắn qua API không báo lỗi thanh toán — nên kiểm tra huggingface.co/settings/billing định kỳ.
 
-## Phương án Docker (khi có quyền)
+## Phương án Docker (khi có quyền/nâng cấp)
 
-Nếu sau này Docker SDK khả dụng: tạo Space mới chọn SDK **Docker**, dùng `webapp/Dockerfile` (đã build + test thật thành công trên máy local, image 708MB, health check pass) thay vì `app.py`/`packages.txt`/`requirements.txt` ở root. `README.md` frontmatter đổi `sdk: docker`, `app_port: 7860`, bỏ `python_version`/`app_file`.
+Nếu sau này Docker SDK khả dụng: tạo Space mới chọn SDK **Docker**, dùng `webapp/Dockerfile` (đã build + test thật thành công trên máy local, image 708MB, health check pass, dùng `torch==2.4.1` như dev local — không cần 3 workaround ZeroGPU ở mục 4) thay vì `app.py`/`packages.txt`/`requirements.txt` ở root. `README.md` frontmatter đổi `sdk: docker`, `app_port: 7860`, bỏ `python_version`/`app_file`.

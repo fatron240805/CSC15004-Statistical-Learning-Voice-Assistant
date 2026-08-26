@@ -29,3 +29,11 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 # (chúng lazy-import sau config.py), để cache tải pretrained model nằm trong
 # DATA_DIR bền vững thay vì mất mỗi lần container khởi động lại.
 os.environ.setdefault("HF_HOME", str(DATA_DIR / "hf_cache"))
+
+# App này chỉ dùng CPU. Trên hardware ZeroGPU (HF Space), torch.cuda.is_available()
+# trả về True (GPU được cấp phát theo yêu cầu qua @spaces.GPU), khiến
+# speaker_model.py (không được sửa) tự chọn device="cuda" rồi crash vì gọi CUDA
+# thật ngoài phạm vi hàm @spaces.GPU. Ép CUDA_VISIBLE_DEVICES rỗng để
+# torch.cuda.is_available() trả về False thật, buộc chọn đúng CPU — không cần
+# đụng speaker_model.py. Không ảnh hưởng máy có GPU thật/không có GPU (no-op).
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")

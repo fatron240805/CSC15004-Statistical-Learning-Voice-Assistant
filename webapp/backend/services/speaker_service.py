@@ -38,6 +38,23 @@ def _patch_symlink_fallback_on_windows() -> None:
     os.symlink = _symlink_or_copy
 
 
+def _patch_force_cpu_on_zerogpu() -> None:
+    """Trên ZeroGPU (HF Space), gói `spaces` patch torch.cuda.is_available()
+    luôn trả True để giả lập có GPU cho cơ chế cấp phát theo yêu cầu — nhưng
+    speaker_model.py (không được sửa) tự chọn device="cuda" theo giá trị đó,
+    rồi crash vì gọi CUDA thật ngoài phạm vi hàm @spaces.GPU. App này chỉ cần
+    CPU, nên patch chồng lên sau `spaces` để is_available() trả False thật —
+    patch của mình chạy sau nên thắng. Không ảnh hưởng máy không có `spaces`
+    (import lỗi -> bỏ qua lặng lẽ) hay máy CPU/GPU thường (torch.cuda vẫn hoạt
+    động đúng, chỉ thêm 1 layer patch không đổi hành vi thật).
+    """
+    try:
+        import torch
+    except ImportError:
+        return
+    torch.cuda.is_available = lambda: False
+
+
 def load_model() -> None:
     """Load SpeakerModel 1 lần. Import speaker_model bên trong hàm này để
     /health và các endpoint chưa cần model vẫn chạy được khi chưa có torch."""
@@ -45,6 +62,7 @@ def load_model() -> None:
     if _model is not None:
         return
     _patch_symlink_fallback_on_windows()
+    _patch_force_cpu_on_zerogpu()
     from backend.speaker_model import SpeakerModel
 
     _model = SpeakerModel(checkpoint_path=CHECKPOINT_PATH)

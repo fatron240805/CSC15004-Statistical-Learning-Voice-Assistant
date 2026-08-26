@@ -1,13 +1,17 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
+# torch 2.11.0 (khác bản dev local 2.4.1 trong backend/requirements.txt) vì
+# ZeroGPU hardware trên HF Space chỉ chấp nhận torch 2.8.0/2.9.1/2.10.0/2.11.0.
+# torchaudio 2.11 đổi backend đọc audio sang torchcodec -> cần thêm dependency.
 fastapi
 uvicorn[standard]
 python-multipart
-torch==2.4.1
-torchaudio==2.4.1
+torch==2.11.0
+torchaudio==2.11.0
+torchcodec
 numpy==1.26.4
 speechbrain
-transformers==4.46.3
+transformers
 pydub
 gTTS
 sqlalchemy
