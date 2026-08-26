@@ -180,6 +180,18 @@ button#recordBtn.recording {
 
 .muted { color: var(--text-muted); font-size: 0.95rem; }
 
+.model-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  justify-content: center;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: -6px 0 20px;
+}
+.model-info span { white-space: nowrap; }
+.model-info b { color: var(--text-lo); font-weight: 600; }
+
 /* fix #4: chỉ dòng kết quả chính đáng đọc lúc lái mới hiện to; các dòng debug
    nội bộ (intent/usecase — giá trị API, không phải nội dung cho người dùng)
    ẩn khỏi luồng chính, chỉ còn trong DOM để debug/inspect khi cần. */
