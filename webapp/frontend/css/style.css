@@ -54,14 +54,45 @@ nav a {
 }
 nav a:hover { color: var(--blue); }
 
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 1080px;
+}
+
 .card {
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 26px 28px;
   margin: 12px 0;
+}
+.layout .card { margin: 0; flex: 1 1 460px; }
+
+/* fix #1: user_id chỉ cần cho lệnh xác thực (SV) — để dạng ô nhỏ, thứ yếu,
+   không phải trường bắt buộc nổi bật nhất trên màn hình (ưu tiên voice-first) */
+.account-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  margin: 0 0 16px;
+  opacity: 0.75;
+}
+.account-field label {
+  margin: 0;
+  white-space: nowrap;
+}
+.account-field input[type=number] {
+  width: 84px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
 }
 
 .sentence {
@@ -96,8 +127,9 @@ input:focus { outline: none; border-color: var(--blue); }
 button {
   font-family: 'Manrope', sans-serif;
   font-weight: 700;
-  font-size: 0.85rem;
-  padding: 12px 22px;
+  font-size: 0.95rem;
+  min-height: 48px;
+  padding: 12px 24px;
   margin: 4px 6px 4px 0;
   border: none;
   border-radius: 999px;
@@ -132,7 +164,7 @@ button#recordBtn.recording {
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 
-#status { min-height: 1.4em; font-size: 0.85rem; color: var(--text-lo); text-align: center; }
+#status { min-height: 1.4em; font-size: 1.05rem; color: var(--text-lo); text-align: center; }
 #status.pass, #finishStatus.pass {
   color: var(--green);
   background: oklch(0.75 0.16 150 / 0.12);
@@ -146,14 +178,19 @@ button#recordBtn.recording {
   border-radius: 10px; padding: 10px 14px; display: block;
 }
 
-.muted { color: var(--text-muted); font-size: 0.8rem; }
+.muted { color: var(--text-muted); font-size: 0.95rem; }
+
+/* fix #4: chỉ dòng kết quả chính đáng đọc lúc lái mới hiện to; các dòng debug
+   nội bộ (intent/usecase — giá trị API, không phải nội dung cho người dùng)
+   ẩn khỏi luồng chính, chỉ còn trong DOM để debug/inspect khi cần. */
+.debug-line { display: none; }
 
 /* 7-sentence progress dots */
-.step-dots { display: flex; gap: 8px; justify-content: center; margin-bottom: 4px; }
+.step-dots { display: flex; gap: 10px; justify-content: center; margin-bottom: 4px; }
 .step-dots span {
-  width: 26px; height: 26px; border-radius: 999px;
+  width: 32px; height: 32px; border-radius: 999px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.7rem; font-weight: 700;
+  font-size: 0.8rem; font-weight: 700;
   border: 1.5px solid var(--border); color: var(--text-muted);
 }
 .step-dots span.done { border-color: var(--green); background: oklch(0.75 0.16 150 / 0.18); color: var(--green); }
@@ -167,7 +204,7 @@ button#recordBtn.recording {
 #resultCard.result-sv-fail { border-color: oklch(0.75 0.16 40 / 0.4); box-shadow: 0 0 40px oklch(0.75 0.16 40 / 0.12); }
 #resultCard.result-sid { border-color: oklch(0.72 0.15 305 / 0.4); box-shadow: 0 0 40px oklch(0.72 0.15 305 / 0.12); }
 
-#resultCard p { font-size: 0.9rem; margin: 8px 0; }
+#resultCard p { font-size: 1.05rem; margin: 8px 0; }
 #resultCard b { color: var(--text-lo); font-weight: 600; }
 #resultCard audio { width: 100%; margin-top: 10px; }
 

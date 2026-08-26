@@ -12,7 +12,9 @@ function renderStepDots() {
   sentenceStatus.forEach((s, i) => {
     const span = document.createElement("span");
     span.className = s === "done" ? "done" : s === "retry" ? "retry" : s === "current" ? "current" : "";
-    span.textContent = String(i + 1);
+    // fix #6: không chỉ dựa vào màu để phân biệt trạng thái (rủi ro mù màu đỏ-lục)
+    span.textContent = s === "done" ? "✓" : s === "retry" ? "!" : String(i + 1);
+    span.title = s === "done" ? "Đạt" : s === "retry" ? "Cần đọc lại" : s === "current" ? "Đang đọc" : "Chưa tới";
     el.appendChild(span);
   });
 }
