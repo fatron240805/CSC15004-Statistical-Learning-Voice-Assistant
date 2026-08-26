@@ -1,0 +1,28 @@
+name: Deploy Module B to HF Space
+
+on:
+  push:
+    branches: [khoa]
+    paths:
+      - "webapp/**"
+      - "!webapp/spec_ModuleB_web_app.md"
+      - "!webapp/IMPLEMENTATION_PLAN.md"
+      - "!webapp/DEPLOY.md"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install huggingface_hub
+
+      - name: Sync webapp/ to HF Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python scripts/deploy_hf_space.py

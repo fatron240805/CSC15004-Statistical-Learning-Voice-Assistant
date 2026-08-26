@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Enroll — Đăng ký giọng nói</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<h1>Đăng ký giọng nói</h1>
+<nav><a href="index.html">← Trang chủ</a></nav>
+
+<div class="card" id="startCard">
+  <label>Họ tên</label>
+  <input type="text" id="nameInput" placeholder="Nguyễn Văn A">
+  <label>Bài hát yêu thích (phân cách bởi dấu phẩy)</label>
+  <input type="text" id="tracksInput" placeholder="Có chắc yêu là đây, Waiting for you">
+  <button id="startBtn" style="width:100%; margin-top:16px">Bắt đầu đọc câu mẫu</button>
+</div>
+
+<div class="card" id="sentenceCard" style="display:none">
+  <p class="muted" style="text-align:center">User ID: <span id="userIdLabel"></span></p>
+  <div class="step-dots" id="stepDots"></div>
+  <p class="muted" style="text-align:center">Câu <span id="idxLabel"></span> / 7</p>
+  <p class="sentence" id="sentenceText"></p>
+  <div class="mic-wrap">
+    <button id="recordBtn" title="Ghi âm">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0"/><path d="M12 18v3"/></svg>
+    </button>
+  </div>
+  <div style="display:flex; justify-content:center;">
+    <button id="stopBtn" disabled>Dừng</button>
+  </div>
+  <p id="status"></p>
+  <div style="display:flex; justify-content:center;">
+    <button id="nextBtn" style="display:none">Câu tiếp theo</button>
+  </div>
+</div>
+
+<div class="card" id="finishCard" style="display:none; text-align:center">
+  <p>Đã đủ 7 câu đạt chất lượng.</p>
+  <button id="finishBtn">Hoàn tất enroll</button>
+  <p id="finishStatus"></p>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/enroll.js"></script>
+</body>
+</html>

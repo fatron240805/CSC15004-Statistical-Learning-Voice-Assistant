@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+python-multipart
+torch==2.4.1
+torchaudio==2.4.1
+numpy==1.26.4
+speechbrain
+transformers==4.46.3
+pydub
+gTTS
+sqlalchemy
+python-dotenv
+google-generativeai
+requests

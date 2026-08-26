@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Chat — Trợ lý ảo</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<h1>Trợ lý ảo</h1>
+<nav><a href="index.html">← Trang chủ</a></nav>
+
+<div class="card">
+  <label>User ID (dùng cho lệnh nhạy cảm — mở khoá/khởi động xe; để trống nếu chỉ hỏi thời tiết/định vị)</label>
+  <input type="number" id="userIdInput" placeholder="vd 1">
+
+  <div class="mic-wrap">
+    <button id="recordBtn" title="Ghi âm lệnh">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0"/><path d="M12 18v3"/></svg>
+    </button>
+  </div>
+  <div style="display:flex; justify-content:center; gap:8px;">
+    <button id="stopBtn" disabled>Dừng</button>
+    <button id="retryBtn" style="display:none">Thử lại xác thực</button>
+  </div>
+  <p id="status"></p>
+</div>
+
+<div class="card" id="resultCard" style="display:none">
+  <p><b>Nhận dạng:</b> <span id="transcript"></span></p>
+  <p><b>Intent:</b> <span id="intent"></span> — <b>Usecase:</b> <span id="usecase"></span></p>
+  <p><b>Trả lời:</b> <span id="text"></span></p>
+  <audio id="ttsAudio" controls></audio>
+  <div id="svPanel" style="display:none">
+    <p id="svMessage"></p>
+  </div>
+  <div id="sidPanel" style="display:none">
+    <p class="muted">Playlist</p>
+    <div id="playlist"></div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/chat.js"></script>
+</body>
+</html>

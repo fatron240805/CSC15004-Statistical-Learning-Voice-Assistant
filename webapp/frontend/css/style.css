@@ -1,0 +1,185 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: oklch(0.135 0.015 260);
+  --bg-elev: oklch(0.19 0.02 260);
+  --bg-elev-2: oklch(0.23 0.02 260);
+  --border: oklch(0.32 0.02 260 / 0.6);
+  --text-hi: oklch(0.97 0.01 260);
+  --text-lo: oklch(0.65 0.02 260);
+  --text-muted: oklch(0.58 0.02 260);
+
+  --blue: oklch(0.72 0.15 235);
+  --green: oklch(0.75 0.16 150);
+  --orange: oklch(0.75 0.16 40);
+  --purple: oklch(0.72 0.15 305);
+  --amber: oklch(0.78 0.14 90);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Manrope', system-ui, sans-serif;
+  background: radial-gradient(900px 560px at 50% 0%, var(--bg-elev) 0%, var(--bg) 60%);
+  color: var(--text-hi);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 20px 60px;
+}
+
+h1 {
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 6px 0 4px;
+  text-align: center;
+}
+
+nav {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+nav a {
+  color: var(--text-lo);
+  text-decoration: none;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+nav a:hover { color: var(--blue); }
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 26px 28px;
+  margin: 12px 0;
+}
+
+.sentence {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+  margin: 18px 0 22px;
+}
+
+label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 14px 0 6px;
+}
+label:first-of-type { margin-top: 0; }
+
+input[type=text], input[type=number] {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-hi);
+  font-family: inherit;
+  font-size: 0.92rem;
+}
+input:focus { outline: none; border-color: var(--blue); }
+
+button {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 12px 22px;
+  margin: 4px 6px 4px 0;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  background: var(--blue);
+  color: oklch(0.14 0.02 235);
+}
+button:disabled { cursor: default; opacity: 0.35; }
+button#stopBtn, button#nextBtn { background: var(--bg-elev-2); color: var(--text-hi); border: 1px solid var(--border); }
+button#retryBtn, button#finishBtn { background: var(--orange); color: oklch(0.15 0.02 40); }
+
+/* circular mic button */
+.mic-wrap { display: flex; justify-content: center; margin: 8px 0 18px; }
+button#recordBtn {
+  width: 96px; height: 96px; border-radius: 999px;
+  background: var(--bg-elev-2);
+  border: 2px solid var(--blue);
+  color: var(--blue);
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; margin: 0;
+  position: relative;
+}
+button#recordBtn svg { width: 32px; height: 32px; }
+button#recordBtn.recording {
+  border-color: var(--amber);
+  color: var(--amber);
+  animation: micPulse 1.4s ease-out infinite;
+}
+@keyframes micPulse {
+  0%   { box-shadow: 0 0 0 0 oklch(0.78 0.14 90 / 0.45); }
+  70%  { box-shadow: 0 0 0 22px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+#status { min-height: 1.4em; font-size: 0.85rem; color: var(--text-lo); text-align: center; }
+#status.pass, #finishStatus.pass {
+  color: var(--green);
+  background: oklch(0.75 0.16 150 / 0.12);
+  border: 1px solid oklch(0.75 0.16 150 / 0.4);
+  border-radius: 10px; padding: 10px 14px; display: block;
+}
+#status.fail, #finishStatus.fail {
+  color: var(--orange);
+  background: oklch(0.75 0.16 40 / 0.12);
+  border: 1px solid oklch(0.75 0.16 40 / 0.4);
+  border-radius: 10px; padding: 10px 14px; display: block;
+}
+
+.muted { color: var(--text-muted); font-size: 0.8rem; }
+
+/* 7-sentence progress dots */
+.step-dots { display: flex; gap: 8px; justify-content: center; margin-bottom: 4px; }
+.step-dots span {
+  width: 26px; height: 26px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 700;
+  border: 1.5px solid var(--border); color: var(--text-muted);
+}
+.step-dots span.done { border-color: var(--green); background: oklch(0.75 0.16 150 / 0.18); color: var(--green); }
+.step-dots span.current { border-color: var(--blue); background: oklch(0.72 0.15 235 / 0.18); color: var(--blue); }
+.step-dots span.retry { border-color: var(--orange); background: oklch(0.75 0.16 40 / 0.18); color: var(--orange); }
+
+/* chat result card, tinted by usecase */
+#resultCard { max-width: 560px; }
+#resultCard.result-general { border-color: oklch(0.72 0.15 235 / 0.4); box-shadow: 0 0 40px oklch(0.72 0.15 235 / 0.1); }
+#resultCard.result-sv-success { border-color: oklch(0.75 0.16 150 / 0.4); box-shadow: 0 0 40px oklch(0.75 0.16 150 / 0.12); }
+#resultCard.result-sv-fail { border-color: oklch(0.75 0.16 40 / 0.4); box-shadow: 0 0 40px oklch(0.75 0.16 40 / 0.12); }
+#resultCard.result-sid { border-color: oklch(0.72 0.15 305 / 0.4); box-shadow: 0 0 40px oklch(0.72 0.15 305 / 0.12); }
+
+#resultCard p { font-size: 0.9rem; margin: 8px 0; }
+#resultCard b { color: var(--text-lo); font-weight: 600; }
+#resultCard audio { width: 100%; margin-top: 10px; }
+
+#svPanel, #sidPanel { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+#svMessage { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1rem; }
+
+.track {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 10px 14px; margin: 8px 0;
+  background: oklch(0.72 0.15 305 / 0.08);
+  border: 1px solid oklch(0.72 0.15 305 / 0.3);
+  border-radius: 12px;
+}
+.track b { color: var(--text-hi); font-size: 0.9rem; }
+.track audio { height: 32px; max-width: 180px; }

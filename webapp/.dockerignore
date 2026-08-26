@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+pretrained_models/
+backend/app.db
+backend/enroll_tmp/
+scratch_*
+*.log
+.git/

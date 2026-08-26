@@ -1,0 +1,28 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Model / data artifacts (large files)
+*.pt
+*.ckpt
+
+# Runtime data
+webapp/backend/app.db
+webapp/backend/enroll_tmp/
+webapp/backend/chat_tmp/
+webapp/backend/hf_cache/
+webapp/pretrained_models/
+
+# Node
+node_modules/
+dist/
+
+# OS
+desktop.ini
