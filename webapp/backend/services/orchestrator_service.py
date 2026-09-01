@@ -55,6 +55,7 @@ def classify(text: str) -> dict:
         response = model.generate_content(
             prompt,
             generation_config={"response_mime_type": "application/json"},
+            request_options={"timeout": 15},
         )
         raw = json.loads(response.text)
         if not isinstance(raw, dict):
@@ -103,7 +104,7 @@ def answer_with_context(question: str, context: dict) -> str:
         prompt = _ANSWER_PROMPT_TEMPLATE.format(
             context=json.dumps(context, ensure_ascii=False), question=question
         )
-        response = model.generate_content(prompt)
+        response = model.generate_content(prompt, request_options={"timeout": 15})
         text = (response.text or "").strip()
         return text or f"Bạn là {context.get('ten', 'người dùng đã đăng ký')}."
     except Exception:

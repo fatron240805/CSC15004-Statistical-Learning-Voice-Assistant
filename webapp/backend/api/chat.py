@@ -23,17 +23,22 @@ TMP_DIR = WEBAPP_DIR / "backend" / "chat_tmp"
 
 
 @router.post("/chat")
-async def chat(
+def chat(
     audio: UploadFile,
     sv_attempt: int = Form(1),
 ):
+    """def thường (không phải async def): toàn bộ xử lý bên dưới là các lệnh gọi
+    đồng bộ/chặn (ASR, Gemini, TTS) — nếu khai async def mà không await, chúng sẽ
+    chặn nguyên event loop, treo luôn cả các request khác đang chờ (đã từng xảy ra
+    với /enroll/sentence, sửa tương tự ở đây). def thường để FastAPI tự chạy trong
+    threadpool, tách biệt với các request song song khác."""
     if audio is None:
         raise HTTPException(400, "thiếu file audio")
 
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     wav_path = str(TMP_DIR / f"{uuid.uuid4().hex}.wav")
     try:
-        webm_bytes = await audio.read()
+        webm_bytes = audio.file.read()
         webm_bytes_to_wav_file(webm_bytes, wav_path)
 
         transcript = asr_service.transcribe(wav_path)
