@@ -91,6 +91,7 @@ function renderResult(data) {
     resultCard.classList.add(data.data.verified ? "result-sv-success" : "result-sv-fail");
     document.getElementById("svMessage").textContent =
       `Xác thực: ${data.data.verified ? "thành công" : "thất bại"}` +
+      (data.data.name ? ` — ${data.data.name}` : "") +
       (data.data.score != null ? ` (score ${data.data.score.toFixed(3)})` : "");
     if (data.data.can_retry) {
       retryBtn.style.display = "inline-block";

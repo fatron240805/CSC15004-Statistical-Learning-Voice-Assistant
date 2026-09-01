@@ -56,6 +56,7 @@ def handle_sv(intent: str, wav_path: str, attempt: int = 1) -> dict:
     try:
         user_id, score, _ = _identify_speaker(session, wav_path, threshold=DEFAULT_THRESHOLD_SV)
         verified = user_id is not None
+        name = session.get(User, user_id).name if verified else None
 
         session.add(ActionLog(user_id=user_id, action=action, verified=verified, score=score))
         session.commit()
@@ -68,7 +69,14 @@ def handle_sv(intent: str, wav_path: str, attempt: int = 1) -> dict:
         else:
             message = "Không xác thực được giọng nói."
 
-        return {"verified": verified, "can_retry": can_retry, "score": score, "message": message}
+        return {
+            "verified": verified,
+            "can_retry": can_retry,
+            "score": score,
+            "user_id": user_id,
+            "name": name,
+            "message": message,
+        }
     finally:
         session.close()
 
@@ -89,6 +97,7 @@ def handle_sid(wav_path: str) -> dict:
                 "message": "Không nhận diện được giọng nói của bạn.",
             }
 
+        user = session.get(User, user_id)
         pref = session.get(Preference, user_id)
         tracks = pref.favorite_tracks if pref and pref.favorite_tracks else []
         playlist = music_service.get_playlist(tracks)
@@ -98,9 +107,10 @@ def handle_sid(wav_path: str) -> dict:
 
         return {
             "user_id": user_id,
+            "name": user.name,
             "verified": True,
             "playlist": playlist,
-            "message": "Đang phát danh sách yêu thích của bạn.",
+            "message": f"Đang phát danh sách yêu thích của {user.name}.",
         }
     finally:
         session.close()
