@@ -15,6 +15,7 @@ from backend.db.database import get_session
 from backend.db.models import ActionLog, Preference, User
 from backend.gating import INTENT_ACTION
 from backend.services import music_service, orchestrator_service, speaker_service, weather_service
+from backend.speaker_model import DEFAULT_THRESHOLD_SV
 
 logger = logging.getLogger(__name__)
 
@@ -34,25 +35,27 @@ def handle_general(intent: str, entities: dict) -> str:
     return "Xin lỗi, tôi chưa hiểu yêu cầu này."
 
 
-def handle_sv(intent: str, user_id: int | None, wav_path: str, attempt: int = 1) -> dict:
-    """SV: verify() trước khi thực hiện action nhạy cảm. Ghi ActionLog mỗi lần gọi."""
+def _identify_speaker(session, wav_path: str, threshold: float | None = None):
+    """Nhận diện giọng nói qua toàn bộ hồ sơ đã enroll. Trả (user_id|None, score|None,
+    emb_runtime). threshold=None dùng mặc định SID (0.20); truyền tường minh
+    DEFAULT_THRESHOLD_SV cho các usecase cần ngưỡng chặt hơn (SV)."""
+    users = session.query(User).filter(User.embedding.isnot(None)).all()
+    db_embeddings = {u.user_id: np.array(u.embedding) for u in users}
+    emb_runtime = speaker_service.get_embedding(wav_path)
+    user_id = speaker_service.identify(emb_runtime, db_embeddings, threshold=threshold)
+    score = float(np.dot(emb_runtime, db_embeddings[user_id])) if user_id is not None else None
+    return user_id, score, emb_runtime
+
+
+def handle_sv(intent: str, wav_path: str, attempt: int = 1) -> dict:
+    """SV: KHÔNG yêu cầu người dùng tự khai báo danh tính (không thực tế trong xe) —
+    tự nhận diện qua toàn bộ hồ sơ đã enroll bằng ngưỡng SV (0.35, chặt hơn ngưỡng
+    SID 0.20) để đảm bảo an toàn cho lệnh nhạy cảm. Ghi ActionLog mỗi lần gọi."""
     action = INTENT_ACTION.get(intent, intent)
     session = get_session()
     try:
-        user = session.get(User, user_id) if user_id else None
-        if user is None or user.embedding is None:
-            session.add(ActionLog(user_id=user_id, action=action, verified=False, score=None))
-            session.commit()
-            return {
-                "verified": False,
-                "can_retry": False,
-                "message": "Chưa xác định được bạn là ai, vui lòng chọn người dùng hoặc enroll trước.",
-            }
-
-        emb_runtime = speaker_service.get_embedding(wav_path)
-        emb_enrolled = np.array(user.embedding)
-        score = float(np.dot(emb_runtime, emb_enrolled))
-        verified = speaker_service.verify(emb_runtime, emb_enrolled)
+        user_id, score, _ = _identify_speaker(session, wav_path, threshold=DEFAULT_THRESHOLD_SV)
+        verified = user_id is not None
 
         session.add(ActionLog(user_id=user_id, action=action, verified=verified, score=score))
         session.commit()
@@ -74,11 +77,7 @@ def handle_sid(wav_path: str) -> dict:
     """SID: identify() -> lấy favorite_tracks -> tìm preview trên Deezer."""
     session = get_session()
     try:
-        users = session.query(User).filter(User.embedding.isnot(None)).all()
-        db_embeddings = {u.user_id: np.array(u.embedding) for u in users}
-
-        emb_runtime = speaker_service.get_embedding(wav_path)
-        user_id = speaker_service.identify(emb_runtime, db_embeddings)
+        user_id, score, _ = _identify_speaker(session, wav_path)
 
         if user_id is None:
             session.add(ActionLog(user_id=None, action="play_playlist", verified=False, score=None))
@@ -90,7 +89,6 @@ def handle_sid(wav_path: str) -> dict:
                 "message": "Không nhận diện được giọng nói của bạn.",
             }
 
-        score = float(np.dot(emb_runtime, db_embeddings[user_id]))
         pref = session.get(Preference, user_id)
         tracks = pref.favorite_tracks if pref and pref.favorite_tracks else []
         playlist = music_service.get_playlist(tracks)
@@ -114,11 +112,7 @@ def handle_personal_query(wav_path: str, question: str) -> dict:
     identify() thành công mới được đưa vào prompt — Gemini không tự bịa danh tính."""
     session = get_session()
     try:
-        users = session.query(User).filter(User.embedding.isnot(None)).all()
-        db_embeddings = {u.user_id: np.array(u.embedding) for u in users}
-
-        emb_runtime = speaker_service.get_embedding(wav_path)
-        user_id = speaker_service.identify(emb_runtime, db_embeddings)
+        user_id, score, _ = _identify_speaker(session, wav_path)
 
         if user_id is None:
             session.add(ActionLog(user_id=None, action="personal_query", verified=False, score=None))
@@ -129,7 +123,6 @@ def handle_personal_query(wav_path: str, question: str) -> dict:
                 "message": "Không nhận diện được giọng nói của bạn, chưa thể trả lời.",
             }
 
-        score = float(np.dot(emb_runtime, db_embeddings[user_id]))
         user = session.get(User, user_id)
         pref = session.get(Preference, user_id)
         context = {

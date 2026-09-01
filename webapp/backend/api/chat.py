@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import uuid
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile
 
@@ -26,7 +25,6 @@ TMP_DIR = WEBAPP_DIR / "backend" / "chat_tmp"
 @router.post("/chat")
 async def chat(
     audio: UploadFile,
-    user_id: Optional[int] = Form(None),
     sv_attempt: int = Form(1),
 ):
     if audio is None:
@@ -49,7 +47,7 @@ async def chat(
         if usecase == "general":
             text = usecases.handle_general(intent, entities)
         elif usecase == "sv":
-            data = usecases.handle_sv(intent, user_id, wav_path, attempt=sv_attempt)
+            data = usecases.handle_sv(intent, wav_path, attempt=sv_attempt)
             text = data["message"]
         elif usecase == "sid":
             if intent == "sid_personal_query":

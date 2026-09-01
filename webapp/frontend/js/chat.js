@@ -9,9 +9,6 @@ const stopBtn = document.getElementById("stopBtn");
 const retryBtn = document.getElementById("retryBtn");
 const statusEl = document.getElementById("status");
 
-const savedUserId = localStorage.getItem("sva_user_id");
-if (savedUserId) document.getElementById("userIdInput").value = savedUserId;
-
 async function startRecording(attempt) {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   chunks = [];
@@ -50,10 +47,8 @@ async function sendChat(blob, attempt) {
   recordBtn.disabled = true;
   retryBtn.style.display = "none";
 
-  const userId = document.getElementById("userIdInput").value.trim();
   const form = new FormData();
   form.append("audio", blob, "command.webm");
-  if (userId) form.append("user_id", userId);
   form.append("sv_attempt", attempt);
 
   try {

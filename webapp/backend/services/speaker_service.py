@@ -85,7 +85,13 @@ def verify(emb1, emb2) -> bool:
     return _model.verify(emb1, emb2)
 
 
-def identify(emb, db_embeddings: dict):
+def identify(emb, db_embeddings: dict, threshold: float | None = None):
+    """threshold=None -> dùng mặc định DEFAULT_THRESHOLD_SID (0.20) của SpeakerModel.
+    Truyền tường minh khi cần ngưỡng khác (README Module A mục 2 đã cho phép cách
+    dùng này) — ví dụ SV tự nhận diện (mục 8.3 spec) dùng DEFAULT_THRESHOLD_SV (0.35)
+    để đảm bảo an toàn cho lệnh nhạy cảm thay vì ngưỡng SID lỏng hơn."""
     if _model is None:
         raise RuntimeError("SpeakerModel chưa được load — gọi load_model() trước.")
-    return _model.identify(emb, db_embeddings)
+    if threshold is None:
+        return _model.identify(emb, db_embeddings)
+    return _model.identify(emb, db_embeddings, threshold=threshold)
